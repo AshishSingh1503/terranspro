@@ -1,0 +1,59 @@
+---
+- name: Set up Apache and deploy a website
+  hosts: web
+  become: yes
+
+  vars:
+    website_url: "https://www.tooplate.com/zip-templates/2125_snapshot.zip"
+    website_zip: "/tmp/site.zip"
+    website_dest: "/var/www/html"
+
+  tasks:
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+        update_cache: yes
+
+    - name: Ensure Apache is started and enabled
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Install unzip
+      apt:
+        name: unzip
+        state: present
+
+    - name: Download website template
+      get_url:
+        url: "{{ website_url }}"
+        dest: "{{ website_zip }}"
+
+    - name: Clean old HTML files
+      file:
+        path: "{{ website_dest }}/index.html"
+        state: absent
+
+    - name: Unzip website content
+      unarchive:
+        src: "{{ website_zip }}"
+        dest: "{{ website_dest }}"
+        remote_src: yes
+        extra_opts: [ "-o" ]
+
+    - name: Move website files to root if nested (optional)
+      command: mv {{ website_dest }}/2125_snapshot/* {{ website_dest }}/
+      args:
+        removes: "{{ website_dest }}/2125_snapshot"
+
+    - name: Set permissions
+      file:
+        path: "{{ website_dest }}"
+        state: directory
+        recurse: yes
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
